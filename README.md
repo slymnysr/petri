@@ -1,5 +1,7 @@
 # Petri — kara kutuyu aç
 
+### ▶ Canlı demo: **https://slymnysr.github.io/petri/** — hiçbir şey kurma, tarayıcıda aç.
+
 **Petri, "yapay zeka neden o kararı verdi" sorusunu herkesin kavrayabileceği bir ölçekte gözle görülür kılan bir eğitim aracıdır.** Evrimin beyin inşa edişini izlersin, sonra o beynin neden öyle davrandığını tam olarak açarsın.
 
 Bir hacimde binlerce canlı evrimleşiyor; her birinin küçük bir sinir ağı var ve hiçbirinin davranışını kimse programlamadı. Bunu yapan başka simülasyonlar da var. Petri'nin farkı, birine tıkladığında hangi duyusunun hangi nöronunu ateşlediğini, o nöronun hangi kararı sürdüğünü ve bu bireyin atasından hangi mutasyonla ayrıldığını canlı olarak görebilmen — yani bir sinir ağının "neden"ini, tamamen inceleyebildiğin bir boyutta.
