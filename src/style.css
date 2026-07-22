@@ -1,0 +1,1204 @@
+/*
+ * Tek tema (koyu) bilinçli bir karar: bu bir mikroskop görüntüsü. Organizmalar
+ * genomdan türeyen HSL renklerle parlak küreler olarak çiziliyor; açık zeminde
+ * okunmazlar.
+ *
+ * Renk anlamları ayrıştırıldı ve bu ayrım her yerde korunuyor:
+ *   mavi  → arayüz, ölçüm, grafik (bir laboratuvar cihazının rengi)
+ *   yeşil → yiyecek (simülasyonun içindeki madde)
+ *   kehribar / mavi → beyin diyagramında pozitif / negatif aktivasyon
+ *   HSL   → canlılar, tonu genomdan gelir; akrabalar benzer renkte görünür
+ * Arayüzün yeşili kullanması yiyecekle karışırdı.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Yüzey katmanları: derinlik, gölgeyle değil zeminle anlatılıyor. */
+  --bg: #080b12;
+  --surface: #0e131d;
+  --surface-raised: #141a26;
+  --border: #1e2735;
+  --border-strong: #2a3547;
+
+  --text: #c9d3e0;
+  --text-dim: #8b98ab;
+  --muted: #66738a;
+
+  --accent: #38bdf8;
+  --accent-dim: #1d5f80;
+  --food: #4ade80;
+  --warn: #f87171;
+
+  /* 4px tabanlı boşluk ölçeği */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -8px rgb(0 0 0 / 0.6);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+#view {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#view:active {
+  cursor: grabbing;
+}
+
+/* ---- Ortak kart yüzeyi ---- */
+
+.hud,
+.inspector,
+.controls {
+  position: fixed;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px) saturate(1.2);
+}
+
+/* ---- Üst-sol ölçüm paneli ---- */
+
+.hud {
+  top: var(--s3);
+  left: var(--s3);
+  min-width: 216px;
+  padding: var(--s3) var(--s4);
+  pointer-events: none;
+  user-select: none;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s4);
+  line-height: 1.85;
+}
+
+.hud-label {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+/* İpucu taşıyan etiketler noktalı altçizgiyle işaretlenir: üzerine gelince
+   düz dil açıklaması beliriyor. */
+.hud-label.has-hint {
+  border-bottom: 1px dotted var(--border-strong);
+  cursor: help;
+  pointer-events: auto;
+}
+
+.hud-value {
+  color: var(--text);
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Sağdaki inceleme paneli ---- */
+
+.inspector {
+  top: var(--s3);
+  right: var(--s3);
+  width: 340px;
+  max-height: calc(100vh - var(--s3) * 2);
+  overflow-y: auto;
+  padding: var(--s4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.inspector.hidden {
+  display: none;
+}
+
+.inspector-close {
+  position: absolute;
+  top: var(--s3);
+  right: var(--s3);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.inspector-close:hover {
+  color: var(--text);
+  background: var(--surface-raised);
+  border-color: var(--muted);
+}
+
+.inspector-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.inspector-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.inspector-vitals {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.select-actions {
+  display: flex;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+
+.select-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.select-reward {
+  color: var(--food);
+}
+
+.select-reward:hover {
+  border-color: var(--food);
+  background: color-mix(in srgb, var(--food) 12%, transparent);
+}
+
+.select-cull {
+  color: var(--warn);
+}
+
+.select-cull:hover {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+
+.select-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.inspector-heading {
+  margin: var(--s4) 0 var(--s2);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ---- Beyin diyagramı ---- */
+
+.brain-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  border-radius: var(--r-md);
+  padding: var(--s1) 0;
+}
+
+.brain-node {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.brain-label {
+  fill: var(--muted);
+  font-size: 7px;
+  font-family: inherit;
+}
+
+/* ---- Karar ve ölçüt çubukları ---- */
+
+.decision-line {
+  margin-bottom: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface-raised);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.decision-muted {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 46px;
+  align-items: center;
+  gap: var(--s2);
+  line-height: 1.95;
+}
+
+.bar-label {
+  color: var(--text-dim);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 6px;
+  background: #131a26;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  border-radius: 3px;
+  transition: width 140ms ease-out;
+}
+
+.bar-fill.negative {
+  background: linear-gradient(90deg, #7f2d2d, var(--warn));
+}
+
+.bar-value {
+  color: var(--text);
+  font-size: 11px;
+  text-align: right;
+}
+
+.lineage-path {
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: break-all;
+  margin-bottom: var(--s1);
+}
+
+/* ---- Nöron rolleri ---- */
+
+.inspector-neurons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 10px;
+}
+
+.neuron-caption,
+.probe-caption {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-style: italic;
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
+.neuron-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.neuron-row.clickable {
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.neuron-row.clickable:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* Kapatılmış (ablasyon) nöron: üstü çizili ve sönük — davranışa katkısı
+   şu an sıfır. */
+.neuron-row.ablated .neuron-tag,
+.neuron-row.ablated .neuron-desc {
+  text-decoration: line-through;
+  opacity: 0.4;
+}
+
+.neuron-tag {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.neuron-desc {
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.neuron-desc.muted {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.neuron-up {
+  color: var(--accent);
+  font-size: 8px;
+}
+
+.neuron-down {
+  color: var(--warn);
+  font-size: 8px;
+}
+
+/* ---- Sol-alt deney paneli ---- */
+
+.controls {
+  bottom: var(--s3);
+  left: var(--s3);
+  width: 312px;
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+  padding: var(--s3) var(--s4) var(--s4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  margin-bottom: var(--s2);
+}
+
+.ctl-button {
+  padding: 5px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.ctl-button:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.ctl-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ctl-button.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.speed-label {
+  min-width: 30px;
+  color: var(--muted);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.io-status {
+  color: var(--accent);
+  font-size: 10.5px;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 104px 1fr 44px;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: 2px;
+}
+
+.slider-label {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.slider-row input[type='range'] {
+  width: 100%;
+  height: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.slider-row input[type='range']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.slider-value {
+  color: var(--text);
+  font-size: 10.5px;
+  text-align: right;
+}
+
+/* ---- Zaman serisi grafikleri ---- */
+
+.chart-wrap {
+  margin-top: var(--s3);
+}
+
+.chart-label {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+}
+
+.chart-canvas {
+  display: block;
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+/* ---- Senaryo paneli (üst-orta) ---- */
+
+.scenario-panel {
+  position: fixed;
+  top: var(--s3);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  pointer-events: none;
+}
+
+.scenario-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 6px 8px 6px 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.scenario-label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scenario-select {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 8px;
+  cursor: pointer;
+  max-width: 260px;
+}
+
+.scenario-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.scenario-dismiss {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.scenario-dismiss:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.scenario-narrative {
+  width: 100%;
+  padding: var(--s3) var(--s4);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  animation: onboard-in 200ms ease-out;
+}
+
+.scenario-narrative.hidden {
+  display: none;
+}
+
+.scenario-watch {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: var(--s2);
+}
+
+.scenario-watch-icon {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 6px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 4px;
+  color: var(--accent);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+
+.scenario-lesson {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+
+/* Dar ekranda senaryo paneli HUD'un altına kaymasın diye daraltılır */
+@media (max-width: 720px) {
+  .scenario-panel {
+    width: calc(100vw - 16px);
+  }
+  .scenario-select {
+    max-width: 180px;
+  }
+}
+
+/* ---- Karşılaştırma (iki dünya) ---- */
+
+.compare-button {
+  position: fixed;
+  bottom: var(--s3);
+  right: 200px; /* "deney"in solunda */
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.compare-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.compare-button.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.compare-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.compare-bar {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px 8px 5px 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  z-index: 6;
+}
+
+.compare-bar.hidden,
+.compare-label.hidden {
+  display: none;
+}
+
+.compare-bar-label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.compare-select {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.compare-label {
+  position: fixed;
+  top: 96px;
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  backdrop-filter: blur(8px);
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.compare-label-left {
+  left: calc(25% - 60px);
+}
+
+.compare-label-right {
+  left: calc(75% - 60px);
+}
+
+/* Ortada ince ayraç */
+.petri-shell::after,
+body:has(.compare-button.active) #view {
+  /* görsel ayrım viewport boşluğuyla sağlanıyor; ek çizgi gerekmez */
+}
+
+/* ---- Deney (hipotez testi) paneli ---- */
+
+.experiment-button {
+  position: fixed;
+  bottom: var(--s3);
+  right: 130px; /* "bulgular"ın solunda */
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.experiment-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.experiment-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.experiment-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s4);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.experiment-overlay.hidden {
+  display: none;
+}
+
+.experiment-card {
+  position: relative;
+  width: min(480px, 100%);
+  padding: var(--s5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  animation: onboard-in 200ms ease-out;
+}
+
+.experiment-controls {
+  display: flex;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+
+.experiment-select {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.experiment-progress {
+  height: 5px;
+  background: #131a26;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: var(--s4);
+}
+
+.experiment-progress.hidden {
+  display: none;
+}
+
+.experiment-progress-bar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 160ms ease;
+}
+
+.experiment-verdict {
+  font-size: 16px;
+  font-weight: 650;
+  margin-bottom: var(--s3);
+}
+
+.experiment-verdict.held {
+  color: var(--food);
+}
+
+.experiment-verdict.failed {
+  color: var(--warn);
+}
+
+.experiment-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s4);
+  line-height: 1.9;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.experiment-key {
+  color: var(--muted);
+}
+
+.experiment-val {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.experiment-note {
+  margin: var(--s3) 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ---- Bulgular paneli ---- */
+
+.findings-button {
+  position: fixed;
+  bottom: var(--s3);
+  right: 54px; /* "?" düğmesinin solunda */
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.findings-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.findings-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.findings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s4);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.findings-overlay.hidden {
+  display: none;
+}
+
+.findings-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: var(--s5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  animation: onboard-in 200ms ease-out;
+}
+
+.findings-close {
+  position: absolute;
+  top: var(--s3);
+  right: var(--s3);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.findings-close:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.findings-eyebrow {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.findings-title {
+  margin: var(--s2) 0 var(--s3);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.findings-intro {
+  margin: 0 0 var(--s4);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.findings-group-heading {
+  margin: var(--s4) 0 var(--s2);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.findings-note {
+  margin: 0 0 var(--s3);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.finding {
+  margin-bottom: var(--s3);
+  padding-left: var(--s3);
+  border-left: 2px solid var(--border-strong);
+}
+
+.finding-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.finding-detail {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.findings-footer {
+  margin: var(--s4) 0 0;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ---- Açılış rehberi ---- */
+
+.help-button {
+  position: fixed;
+  bottom: var(--s3);
+  right: var(--s3);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.help-button:hover {
+  border-color: var(--accent);
+  transform: scale(1.08);
+}
+
+.help-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.onboard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s4);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.onboard-overlay.hidden {
+  display: none;
+}
+
+.onboard-card {
+  width: min(440px, 100%);
+  padding: var(--s5) var(--s5) var(--s4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  animation: onboard-in 220ms ease-out;
+}
+
+@keyframes onboard-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.onboard-eyebrow {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.onboard-title {
+  margin: var(--s2) 0 var(--s3);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.onboard-body {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  min-height: 4.8em;
+}
+
+.onboard-dots {
+  display: flex;
+  gap: 6px;
+  margin: var(--s4) 0;
+}
+
+.onboard-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  transition: background 160ms ease, width 160ms ease;
+}
+
+.onboard-dot.active {
+  width: 20px;
+  border-radius: 4px;
+  background: var(--accent);
+}
+
+.onboard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.onboard-nav-right {
+  display: flex;
+  gap: var(--s2);
+}
+
+.onboard-skip {
+  padding: 6px 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.onboard-skip:hover {
+  color: var(--text-dim);
+}
+
+.onboard-btn {
+  padding: 7px 16px;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  color: #06121a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.onboard-btn:hover {
+  filter: brightness(1.1);
+}
+
+.onboard-btn.ghost {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.onboard-btn.ghost:hover {
+  filter: none;
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+.onboard-btn:focus-visible,
+.onboard-skip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Erişilebilirlik ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

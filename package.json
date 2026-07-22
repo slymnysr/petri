@@ -1,0 +1,23 @@
+{
+  "name": "petri",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Yapay yaşam ve yorumlanabilirlik laboratuvarı",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run tests/rng.test.ts tests/pool.test.ts tests/grid.test.ts tests/geometry.test.ts tests/mat4.test.ts tests/brain.test.ts tests/probe.test.ts tests/integration.test.ts tests/determinism.test.ts tests/performance.test.ts",
+    "test:full": "vitest run",
+    "test:e2e": "playwright test",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}

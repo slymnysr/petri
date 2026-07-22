@@ -1,0 +1,16 @@
+# Bağımlılıklar
+node_modules/
+
+# Derleme çıktısı (npm run build ile üretilir)
+dist/
+
+# Test çıktıları
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# Günlükler ve editör
+*.log
+.DS_Store
+.vscode/
+.idea/
